@@ -1,0 +1,973 @@
+{
+  "meta": {
+    "title": "合成示意点集",
+    "version": "演示数据 v1",
+    "coordinateUnit": "su",
+    "disclaimer": "所有点、轨迹、坐标与属性均由本工具程序化合成，仅用于三维查询、遮挡与无障碍交互测试；它们不是真实天体，也不代表经过验证的天体测量。"
+  },
+  "camera": {
+    "position": [
+      8.5,
+      6.2,
+      17
+    ],
+    "target": [
+      0,
+      0.5,
+      0
+    ],
+    "fov": 42
+  },
+  "groups": {
+    "wing": {
+      "id": "wing",
+      "label": "翼流群",
+      "color": "#f2b45f",
+      "description": "沿开放曲线分布的合成点群。"
+    },
+    "ring": {
+      "id": "ring",
+      "label": "环带群",
+      "color": "#64d8d2",
+      "description": "闭合环带上的合成点群。"
+    },
+    "cross": {
+      "id": "cross",
+      "label": "穿行群",
+      "color": "#ef7f9f",
+      "description": "斜向穿行的开放点群。"
+    },
+    "halo": {
+      "id": "halo",
+      "label": "远景群",
+      "color": "#b19bff",
+      "description": "用于近远距混合测试的远景点。"
+    },
+    "echo": {
+      "id": "echo",
+      "label": "叠影测试组",
+      "color": "#ffd477",
+      "description": "沿初始视线排列的遮挡与拾取测试点。"
+    }
+  },
+  "trajectories": [
+    {
+      "id": "alpha",
+      "name": "翼流开放轨迹",
+      "shortName": "α",
+      "group": "wing",
+      "points": [
+        [
+          -6.2,
+          2.1,
+          -2.8
+        ],
+        [
+          -4.8,
+          3,
+          -2
+        ],
+        [
+          -3.3,
+          3.7,
+          -1.1
+        ],
+        [
+          -1.7,
+          4,
+          -0.1
+        ],
+        [
+          0,
+          3.7,
+          0.9
+        ],
+        [
+          1.7,
+          3,
+          1.6
+        ],
+        [
+          3.3,
+          2,
+          1.9
+        ],
+        [
+          4.9,
+          0.8,
+          1.6
+        ]
+      ],
+      "closed": false,
+      "dashed": false,
+      "description": "连接翼流群采样点的开放折线。"
+    },
+    {
+      "id": "beta",
+      "name": "环带闭合轨迹",
+      "shortName": "β",
+      "group": "ring",
+      "points": [
+        [
+          4.8,
+          0.1,
+          0
+        ],
+        [
+          3.394,
+          1,
+          3.394
+        ],
+        [
+          0,
+          1.4,
+          4.8
+        ],
+        [
+          -3.394,
+          1,
+          3.394
+        ],
+        [
+          -4.8,
+          0.1,
+          0
+        ],
+        [
+          -3.394,
+          -0.8,
+          -3.394
+        ],
+        [
+          0,
+          -1.1,
+          -4.8
+        ],
+        [
+          3.394,
+          -0.8,
+          -3.394
+        ]
+      ],
+      "closed": true,
+      "dashed": false,
+      "description": "连接环带群采样点的闭合轨迹。"
+    },
+    {
+      "id": "gamma",
+      "name": "穿行斜向轨迹",
+      "shortName": "γ",
+      "group": "cross",
+      "points": [
+        [
+          -5.5,
+          -2.2,
+          -4.8
+        ],
+        [
+          -3.3,
+          -1.2,
+          -2.9
+        ],
+        [
+          -1.1,
+          -0.2,
+          -1
+        ],
+        [
+          1.1,
+          0.8,
+          0.9
+        ],
+        [
+          3.3,
+          1.8,
+          2.8
+        ],
+        [
+          5.5,
+          2.8,
+          4.7
+        ]
+      ],
+      "closed": false,
+      "dashed": true,
+      "description": "连接穿行群采样点的斜向虚线轨迹。"
+    },
+    {
+      "id": "theta",
+      "name": "远景弧线",
+      "shortName": "θ",
+      "group": "halo",
+      "points": [
+        [
+          -11.5,
+          7,
+          -13.5
+        ],
+        [
+          -6.2,
+          8.8,
+          -16
+        ],
+        [
+          0.8,
+          9.8,
+          -15.2
+        ],
+        [
+          7.4,
+          8.1,
+          -12
+        ],
+        [
+          11.8,
+          6.4,
+          -8.5
+        ],
+        [
+          -2.23,
+          -1.63,
+          -6.35
+        ]
+      ],
+      "closed": false,
+      "dashed": true,
+      "description": "连接远景群采样点的稀疏虚线弧。"
+    }
+  ],
+  "objects": [
+    {
+      "id": "wing-01",
+      "name": "翼流-01",
+      "position": [
+        -6.2,
+        2.1,
+        -2.8
+      ],
+      "group": "wing",
+      "trajectoryId": "alpha",
+      "spectralClass": "S-W1",
+      "temperatureK": 4300,
+      "luminosity": 0.7,
+      "tags": [
+        "合成点",
+        "翼流群",
+        "近景",
+        "开放曲线"
+      ],
+      "note": "开放翼流曲线上的第 1 个合成采样点，用于列表与空间导航测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "wing-02",
+      "name": "翼流-02",
+      "position": [
+        -4.8,
+        3,
+        -2
+      ],
+      "group": "wing",
+      "trajectoryId": "alpha",
+      "spectralClass": "S-W2",
+      "temperatureK": 4510,
+      "luminosity": 0.7899999999999999,
+      "tags": [
+        "合成点",
+        "翼流群",
+        "近景",
+        "开放曲线"
+      ],
+      "note": "开放翼流曲线上的第 2 个合成采样点，用于列表与空间导航测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "wing-03",
+      "name": "翼流-03",
+      "position": [
+        -3.3,
+        3.7,
+        -1.1
+      ],
+      "group": "wing",
+      "trajectoryId": "alpha",
+      "spectralClass": "S-W3",
+      "temperatureK": 4720,
+      "luminosity": 0.8799999999999999,
+      "tags": [
+        "合成点",
+        "翼流群",
+        "近景",
+        "开放曲线"
+      ],
+      "note": "开放翼流曲线上的第 3 个合成采样点，用于列表与空间导航测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "wing-04",
+      "name": "翼流-04",
+      "position": [
+        -1.7,
+        4,
+        -0.1
+      ],
+      "group": "wing",
+      "trajectoryId": "alpha",
+      "spectralClass": "S-W4",
+      "temperatureK": 4930,
+      "luminosity": 0.97,
+      "tags": [
+        "合成点",
+        "翼流群",
+        "开放曲线",
+        "中层"
+      ],
+      "note": "开放翼流曲线上的第 4 个合成采样点，用于列表与空间导航测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "wing-05",
+      "name": "翼流-05",
+      "position": [
+        0,
+        3.7,
+        0.9
+      ],
+      "group": "wing",
+      "trajectoryId": "alpha",
+      "spectralClass": "S-W5",
+      "temperatureK": 5140,
+      "luminosity": 1.06,
+      "tags": [
+        "合成点",
+        "翼流群",
+        "开放曲线",
+        "中层"
+      ],
+      "note": "开放翼流曲线上的第 5 个合成采样点，用于列表与空间导航测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "wing-06",
+      "name": "翼流-06",
+      "position": [
+        1.7,
+        3,
+        1.6
+      ],
+      "group": "wing",
+      "trajectoryId": "alpha",
+      "spectralClass": "S-W6",
+      "temperatureK": 5350,
+      "luminosity": 1.15,
+      "tags": [
+        "合成点",
+        "翼流群",
+        "开放曲线",
+        "中层"
+      ],
+      "note": "开放翼流曲线上的第 6 个合成采样点，用于列表与空间导航测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "wing-07",
+      "name": "翼流-07",
+      "position": [
+        3.3,
+        2,
+        1.9
+      ],
+      "group": "wing",
+      "trajectoryId": "alpha",
+      "spectralClass": "S-W7",
+      "temperatureK": 5560,
+      "luminosity": 1.24,
+      "tags": [
+        "合成点",
+        "翼流群",
+        "开放曲线",
+        "中层"
+      ],
+      "note": "开放翼流曲线上的第 7 个合成采样点，用于列表与空间导航测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "wing-08",
+      "name": "翼流-08",
+      "position": [
+        4.9,
+        0.8,
+        1.6
+      ],
+      "group": "wing",
+      "trajectoryId": "alpha",
+      "spectralClass": "S-W8",
+      "temperatureK": 5770,
+      "luminosity": 1.33,
+      "tags": [
+        "合成点",
+        "翼流群",
+        "开放曲线",
+        "中层"
+      ],
+      "note": "开放翼流曲线上的第 8 个合成采样点，用于列表与空间导航测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "ring-01",
+      "name": "环带-01",
+      "position": [
+        4.8,
+        0.1,
+        0
+      ],
+      "group": "ring",
+      "trajectoryId": "beta",
+      "spectralClass": "S-R1",
+      "temperatureK": 5900,
+      "luminosity": 1.1,
+      "tags": [
+        "合成点",
+        "环带群",
+        "闭合环",
+        "近侧"
+      ],
+      "note": "闭合环带上的第 1 个合成采样点，环绕原点分布。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "ring-02",
+      "name": "环带-02",
+      "position": [
+        3.394,
+        1,
+        3.394
+      ],
+      "group": "ring",
+      "trajectoryId": "beta",
+      "spectralClass": "S-R2",
+      "temperatureK": 6060,
+      "luminosity": 1.2200000000000002,
+      "tags": [
+        "合成点",
+        "环带群",
+        "闭合环",
+        "近侧"
+      ],
+      "note": "闭合环带上的第 2 个合成采样点，环绕原点分布。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "ring-03",
+      "name": "环带-03",
+      "position": [
+        0,
+        1.4,
+        4.8
+      ],
+      "group": "ring",
+      "trajectoryId": "beta",
+      "spectralClass": "S-R3",
+      "temperatureK": 6220,
+      "luminosity": 1.34,
+      "tags": [
+        "合成点",
+        "环带群",
+        "闭合环",
+        "近侧"
+      ],
+      "note": "闭合环带上的第 3 个合成采样点，环绕原点分布。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "ring-04",
+      "name": "环带-04",
+      "position": [
+        -3.394,
+        1,
+        3.394
+      ],
+      "group": "ring",
+      "trajectoryId": "beta",
+      "spectralClass": "S-R4",
+      "temperatureK": 6380,
+      "luminosity": 1.46,
+      "tags": [
+        "合成点",
+        "环带群",
+        "闭合环",
+        "近侧"
+      ],
+      "note": "闭合环带上的第 4 个合成采样点，环绕原点分布。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "ring-05",
+      "name": "环带-05",
+      "position": [
+        -4.8,
+        0.1,
+        0
+      ],
+      "group": "ring",
+      "trajectoryId": "beta",
+      "spectralClass": "S-R5",
+      "temperatureK": 6540,
+      "luminosity": 1.58,
+      "tags": [
+        "合成点",
+        "环带群",
+        "闭合环",
+        "远侧"
+      ],
+      "note": "闭合环带上的第 5 个合成采样点，环绕原点分布。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "ring-06",
+      "name": "环带-06",
+      "position": [
+        -3.394,
+        -0.8,
+        -3.394
+      ],
+      "group": "ring",
+      "trajectoryId": "beta",
+      "spectralClass": "S-R6",
+      "temperatureK": 6700,
+      "luminosity": 1.7000000000000002,
+      "tags": [
+        "合成点",
+        "环带群",
+        "闭合环",
+        "远侧"
+      ],
+      "note": "闭合环带上的第 6 个合成采样点，环绕原点分布。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "ring-07",
+      "name": "环带-07",
+      "position": [
+        0,
+        -1.1,
+        -4.8
+      ],
+      "group": "ring",
+      "trajectoryId": "beta",
+      "spectralClass": "S-R7",
+      "temperatureK": 6860,
+      "luminosity": 1.82,
+      "tags": [
+        "合成点",
+        "环带群",
+        "闭合环",
+        "远侧"
+      ],
+      "note": "闭合环带上的第 7 个合成采样点，环绕原点分布。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "ring-08",
+      "name": "环带-08",
+      "position": [
+        3.394,
+        -0.8,
+        -3.394
+      ],
+      "group": "ring",
+      "trajectoryId": "beta",
+      "spectralClass": "S-R8",
+      "temperatureK": 7020,
+      "luminosity": 1.94,
+      "tags": [
+        "合成点",
+        "环带群",
+        "闭合环",
+        "远侧"
+      ],
+      "note": "闭合环带上的第 8 个合成采样点，环绕原点分布。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "cross-01",
+      "name": "穿行-01",
+      "position": [
+        -5.5,
+        -2.2,
+        -4.8
+      ],
+      "group": "cross",
+      "trajectoryId": "gamma",
+      "spectralClass": "S-C1",
+      "temperatureK": 7100,
+      "luminosity": 2,
+      "tags": [
+        "合成点",
+        "穿行群",
+        "斜向穿行",
+        "开放曲线"
+      ],
+      "note": "斜向穿行曲线上的第 1 个合成采样点。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "cross-02",
+      "name": "穿行-02",
+      "position": [
+        -3.3,
+        -1.2,
+        -2.9
+      ],
+      "group": "cross",
+      "trajectoryId": "gamma",
+      "spectralClass": "S-C2",
+      "temperatureK": 7290,
+      "luminosity": 2.2,
+      "tags": [
+        "合成点",
+        "穿行群",
+        "斜向穿行",
+        "开放曲线"
+      ],
+      "note": "斜向穿行曲线上的第 2 个合成采样点。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "cross-03",
+      "name": "穿行-03",
+      "position": [
+        -1.1,
+        -0.2,
+        -1
+      ],
+      "group": "cross",
+      "trajectoryId": "gamma",
+      "spectralClass": "S-C3",
+      "temperatureK": 7480,
+      "luminosity": 2.4,
+      "tags": [
+        "合成点",
+        "穿行群",
+        "斜向穿行",
+        "开放曲线"
+      ],
+      "note": "斜向穿行曲线上的第 3 个合成采样点。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "cross-04",
+      "name": "穿行-04",
+      "position": [
+        1.1,
+        0.8,
+        0.9
+      ],
+      "group": "cross",
+      "trajectoryId": "gamma",
+      "spectralClass": "S-C4",
+      "temperatureK": 7670,
+      "luminosity": 2.6,
+      "tags": [
+        "合成点",
+        "穿行群",
+        "斜向穿行",
+        "初始隐藏测试"
+      ],
+      "note": "初始即隐藏的合成点；用于检查隐藏对象的轮廓定位与鼠标不可拾取状态。",
+      "initiallyHidden": true
+    },
+    {
+      "id": "cross-05",
+      "name": "穿行-05",
+      "position": [
+        3.3,
+        1.8,
+        2.8
+      ],
+      "group": "cross",
+      "trajectoryId": "gamma",
+      "spectralClass": "S-C5",
+      "temperatureK": 7860,
+      "luminosity": 2.8,
+      "tags": [
+        "合成点",
+        "穿行群",
+        "斜向穿行",
+        "开放曲线"
+      ],
+      "note": "斜向穿行曲线上的第 5 个合成采样点。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "cross-06",
+      "name": "穿行-06",
+      "position": [
+        5.5,
+        2.8,
+        4.7
+      ],
+      "group": "cross",
+      "trajectoryId": "gamma",
+      "spectralClass": "S-C6",
+      "temperatureK": 8050,
+      "luminosity": 3,
+      "tags": [
+        "合成点",
+        "穿行群",
+        "斜向穿行",
+        "开放曲线"
+      ],
+      "note": "斜向穿行曲线上的第 6 个合成采样点。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "halo-01",
+      "name": "远景-01",
+      "position": [
+        -11.5,
+        7,
+        -13.5
+      ],
+      "group": "halo",
+      "trajectoryId": "theta",
+      "spectralClass": "S-H1",
+      "temperatureK": 9800,
+      "luminosity": 8,
+      "tags": [
+        "合成点",
+        "远景群",
+        "远景",
+        "近远混合"
+      ],
+      "note": "位于远景壳层上的第 1 个合成采样点，用于近远距投影与拾取测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "halo-02",
+      "name": "远景-02",
+      "position": [
+        -6.2,
+        8.8,
+        -16
+      ],
+      "group": "halo",
+      "trajectoryId": "theta",
+      "spectralClass": "S-H2",
+      "temperatureK": 10220,
+      "luminosity": 9.5,
+      "tags": [
+        "合成点",
+        "远景群",
+        "远景",
+        "近远混合"
+      ],
+      "note": "位于远景壳层上的第 2 个合成采样点，用于近远距投影与拾取测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "halo-03",
+      "name": "远景-03",
+      "position": [
+        0.8,
+        9.8,
+        -15.2
+      ],
+      "group": "halo",
+      "trajectoryId": "theta",
+      "spectralClass": "S-H3",
+      "temperatureK": 10640,
+      "luminosity": 11,
+      "tags": [
+        "合成点",
+        "远景群",
+        "远景",
+        "近远混合"
+      ],
+      "note": "位于远景壳层上的第 3 个合成采样点，用于近远距投影与拾取测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "halo-04",
+      "name": "远景-04",
+      "position": [
+        7.4,
+        8.1,
+        -12
+      ],
+      "group": "halo",
+      "trajectoryId": "theta",
+      "spectralClass": "S-H4",
+      "temperatureK": 11060,
+      "luminosity": 12.5,
+      "tags": [
+        "合成点",
+        "远景群",
+        "远景",
+        "近远混合"
+      ],
+      "note": "位于远景壳层上的第 4 个合成采样点，用于近远距投影与拾取测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "halo-05",
+      "name": "远景-05",
+      "position": [
+        11.8,
+        6.4,
+        -8.5
+      ],
+      "group": "halo",
+      "trajectoryId": "theta",
+      "spectralClass": "S-H5",
+      "temperatureK": 11480,
+      "luminosity": 14,
+      "tags": [
+        "合成点",
+        "远景群",
+        "远景",
+        "近远混合"
+      ],
+      "note": "位于远景壳层上的第 5 个合成采样点，用于近远距投影与拾取测试。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "halo-06",
+      "name": "远景-06",
+      "position": [
+        -2.23,
+        -1.63,
+        -6.35
+      ],
+      "group": "halo",
+      "trajectoryId": null,
+      "spectralClass": "S-H6",
+      "temperatureK": 11900,
+      "luminosity": 15.5,
+      "tags": [
+        "合成点",
+        "远景群",
+        "远景",
+        "近远混合",
+        "遮挡测试"
+      ],
+      "note": "位于远景壳层、投影上与穿行-04 重叠的合成点，用于验证近远混合遮挡。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "echo-01",
+      "name": "叠影-01",
+      "position": [
+        5.054709072899484,
+        3.8896284371208307,
+        10.109418145798967
+      ],
+      "group": "echo",
+      "trajectoryId": null,
+      "spectralClass": "S-E1",
+      "temperatureK": 6200,
+      "luminosity": 0.9,
+      "tags": [
+        "合成点",
+        "叠影测试组",
+        "同视线",
+        "遮挡测试",
+        "最近"
+      ],
+      "note": "沿初始相机视线排列的合成叠影点；与其他叠影点共享屏幕投影，但深度不同。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "echo-02",
+      "name": "叠影-02",
+      "position": [
+        4.112305686426699,
+        3.257663813250845,
+        8.224611372853397
+      ],
+      "group": "echo",
+      "trajectoryId": null,
+      "spectralClass": "S-E2",
+      "temperatureK": 6520,
+      "luminosity": 1.25,
+      "tags": [
+        "合成点",
+        "叠影测试组",
+        "同视线",
+        "遮挡测试",
+        "中层"
+      ],
+      "note": "沿初始相机视线排列的合成叠影点；与其他叠影点共享屏幕投影，但深度不同。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "echo-03",
+      "name": "叠影-03",
+      "position": [
+        3.1699022999539137,
+        2.62569918938086,
+        6.339804599907827
+      ],
+      "group": "echo",
+      "trajectoryId": null,
+      "spectralClass": "S-E3",
+      "temperatureK": 6840,
+      "luminosity": 1.6,
+      "tags": [
+        "合成点",
+        "叠影测试组",
+        "同视线",
+        "遮挡测试",
+        "中层"
+      ],
+      "note": "沿初始相机视线排列的合成叠影点；与其他叠影点共享屏幕投影，但深度不同。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "echo-04",
+      "name": "叠影-04",
+      "position": [
+        2.2274989134811283,
+        1.9937345655108745,
+        4.4549978269622565
+      ],
+      "group": "echo",
+      "trajectoryId": null,
+      "spectralClass": "S-E4",
+      "temperatureK": 7160,
+      "luminosity": 1.9499999999999997,
+      "tags": [
+        "合成点",
+        "叠影测试组",
+        "同视线",
+        "遮挡测试",
+        "中层"
+      ],
+      "note": "沿初始相机视线排列的合成叠影点；与其他叠影点共享屏幕投影，但深度不同。",
+      "initiallyHidden": false
+    },
+    {
+      "id": "echo-05",
+      "name": "叠影-05",
+      "position": [
+        1.2850955270083433,
+        1.361769941640889,
+        2.5701910540166866
+      ],
+      "group": "echo",
+      "trajectoryId": null,
+      "spectralClass": "S-E5",
+      "temperatureK": 7480,
+      "luminosity": 2.3,
+      "tags": [
+        "合成点",
+        "叠影测试组",
+        "同视线",
+        "遮挡测试",
+        "最远"
+      ],
+      "note": "沿初始相机视线排列的合成叠影点；与其他叠影点共享屏幕投影，但深度不同。",
+      "initiallyHidden": false
+    }
+  ]
+}

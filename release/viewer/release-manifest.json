@@ -1,0 +1,27 @@
+{
+  "name": "synthetic-space-explorer-release",
+  "builtAt": "2026-11-17T06:52:42.500Z",
+  "contents": [
+    "assets",
+    "assets/index-CCdMtGW_.css",
+    "assets/index-Cc2Hwsw1.js",
+    "data",
+    "data/dataset.json",
+    "data/keyboard-nav.json",
+    "fonts",
+    "fonts/explorer-mono.woff2",
+    "fonts/explorer-sans-bold.woff2",
+    "fonts/explorer-sans.woff2",
+    "index.html",
+    "serve-release.mjs",
+    "start.sh"
+  ],
+  "entry": "index.html",
+  "resources": [
+    "data/dataset.json",
+    "data/keyboard-nav.json",
+    "fonts/explorer-sans.woff2",
+    "fonts/explorer-sans-bold.woff2",
+    "fonts/explorer-mono.woff2"
+  ]
+}

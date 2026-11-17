@@ -1,7 +1,8 @@
+import type { KeyboardConfig, NavDirection } from "../data/keyboardConfig";
 import type { ProjectionEntry } from "./SpaceScene";
 
+export type { NavDirection } from "../data/keyboardConfig";
 export type NavMode = "list" | "spatial";
-export type NavDirection = "up" | "down" | "left" | "right";
 
 export interface NavigationContext {
   mode: NavMode;
@@ -11,8 +12,6 @@ export interface NavigationContext {
   projections: ProjectionEntry[];
   includeHidden: boolean;
 }
-
-const MAX_ANGLE_DEG = 45;
 
 /** Angle between a candidate offset and the requested screen direction. */
 function directionDelta(dx: number, dy: number, direction: NavDirection): number {
@@ -38,9 +37,10 @@ export function navigateList(
   currentId: string | null,
   orderedIds: string[],
   direction: NavDirection,
+  config: KeyboardConfig,
 ): string | null {
   if (orderedIds.length === 0) return null;
-  const forward = direction === "down" || direction === "right";
+  const forward = config.list.forward.includes(keyForDirection(direction));
   const index = currentId ? orderedIds.indexOf(currentId) : -1;
   if (index === -1) {
     return forward ? orderedIds[0] : orderedIds[orderedIds.length - 1];
@@ -61,10 +61,14 @@ export function jumpList(
   return edge === "start" ? orderedIds[0] : orderedIds[orderedIds.length - 1];
 }
 
+function keyForDirection(direction: NavDirection): string {
+  return { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight" }[direction];
+}
+
 /**
- * Spatial mode chooses the nearest on-screen point whose bearing is within
- * MAX_ANGLE_DEG of the arrow direction. Ties break by screen distance, depth,
- * then stable ID. Off-screen points are excluded so each key press is
+ * Spatial mode chooses the nearest on-screen point whose bearing is within the
+ * configured cone of the arrow direction. Ties break by screen distance,
+ * depth, then stable ID. Off-screen points are excluded so each key press is
  * predictable. Hidden points can be included explicitly via the H toggle.
  */
 export function navigateSpatial(
@@ -72,12 +76,15 @@ export function navigateSpatial(
   projections: ProjectionEntry[],
   direction: NavDirection,
   includeHidden: boolean,
+  config: KeyboardConfig,
 ): string | null {
+  const maxAngle = config.spatial.maxConeAngleDeg;
+  const tieTolerance = config.spatial.tieTolerancePx;
   const pool = projections.filter((entry) => includeHidden || !entry.hidden);
   const onScreen = pool.filter((entry) => entry.onScreen);
   if (onScreen.length === 0) return null;
 
-  let origin = currentId ? onScreen.find((entry) => entry.id === currentId) : undefined;
+  const origin = currentId ? onScreen.find((entry) => entry.id === currentId) : undefined;
   if (!origin) {
     // With no focus, pick a deterministic entry point opposite the arrow, so
     // "up" starts from the lowest on-screen point and moves upward.
@@ -91,10 +98,10 @@ export function navigateSpatial(
   }
 
   const candidates = onScreen
-    .filter((entry) => entry.id !== origin!.id)
+    .filter((entry) => entry.id !== origin.id)
     .map((entry) => {
-      const dx = entry.x - origin!.x;
-      const dy = entry.y - origin!.y;
+      const dx = entry.x - origin.x;
+      const dy = entry.y - origin.y;
       const distance = Math.hypot(dx, dy);
       return {
         entry,
@@ -104,7 +111,7 @@ export function navigateSpatial(
         angle: directionDelta(dx, dy, direction),
       };
     })
-    .filter((candidate) => candidate.distance >= 1 && candidate.angle <= MAX_ANGLE_DEG)
+    .filter((candidate) => candidate.distance >= 1 && candidate.angle <= maxAngle)
     .sort(
       (a, b) =>
         a.distance - b.distance ||
@@ -114,9 +121,9 @@ export function navigateSpatial(
 
   if (candidates.length > 0) {
     const nearestDistance = candidates[0].distance;
-    // Prefer candidates within 2 px of the nearest so ties resolve by ID, not
-    // by sub-pixel noise.
-    const tied = candidates.filter((candidate) => candidate.distance <= nearestDistance + 2);
+    // Prefer candidates within the configured tolerance of the nearest so ties
+    // resolve by ID, not by sub-pixel noise.
+    const tied = candidates.filter((candidate) => candidate.distance <= nearestDistance + tieTolerance);
     tied.sort((a, b) => a.entry.id.localeCompare(b.entry.id));
     return tied[0]?.entry.id ?? null;
   }
@@ -124,10 +131,10 @@ export function navigateSpatial(
   // Cone empty: fall back to the least-wide angle within the forward half
   // plane instead of refusing to move.
   const halfPlane = onScreen
-    .filter((entry) => entry.id !== origin!.id)
+    .filter((entry) => entry.id !== origin.id)
     .map((entry) => {
-      const dx = entry.x - origin!.x;
-      const dy = entry.y - origin!.y;
+      const dx = entry.x - origin.x;
+      const dy = entry.y - origin.y;
       const distance = Math.hypot(dx, dy);
       return { entry, distance, angle: directionDelta(dx, dy, direction) };
     })

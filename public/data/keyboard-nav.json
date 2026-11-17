@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "list": {
+    "forward": ["ArrowDown", "ArrowRight"],
+    "backward": ["ArrowUp", "ArrowLeft"],
+    "jumpToStart": ["Home"],
+    "jumpToEnd": ["End"],
+    "activate": ["Enter", " "],
+    "clearFocus": ["Escape"]
+  },
+  "spatial": {
+    "directions": {
+      "up": "ArrowUp",
+      "down": "ArrowDown",
+      "left": "ArrowLeft",
+      "right": "ArrowRight"
+    },
+    "maxConeAngleDeg": 45,
+    "tieTolerancePx": 2,
+    "hiddenToggleKey": "h",
+    "includeHiddenByDefault": false
+  },
+  "global": {
+    "locateKey": "f",
+    "resetKey": "r",
+    "hiddenToggleKey": "h",
+    "ignoredModifiers": ["ctrlKey", "metaKey", "altKey"]
+  },
+  "help": {
+    "listRule": "列表顺序：↑/← 上一项，↓/→ 下一项。排序或反向不会改变焦点身份。",
+    "spatialRule": "空间邻接：↑/↓/←/→ 在屏幕投影中选择该方向 45° 内最近的对象；隐藏对象默认排除。"
+  }
+}

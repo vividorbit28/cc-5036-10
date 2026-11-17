@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>三维合成点集浏览器</title>
+    <meta
+      name="description"
+      content="可鼠标拾取、键盘导航与遮挡定位的三维合成点集查询演示。示例数据为程序化合成，不是真实天体测量。"
+    />
+    <script type="module" crossorigin src="./assets/index-Cc2Hwsw1.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CCdMtGW_.css">
+  </head>
+  <body>
+    <div
+      id="boot-overlay"
+      class="boot-overlay"
+      role="status"
+      aria-live="polite"
+      data-testid="boot-overlay"
+    >
+      <div class="boot-card">
+        <h2 id="boot-title">正在加载查看器资源</h2>
+        <p id="boot-message" class="boot-message">
+          正在获取数据样例、键盘导航配置与自托管字体，请稍候。
+        </p>
+        <ul id="boot-resource-list" class="boot-resource-list" data-testid="boot-resource-list"></ul>
+      </div>
+    </div>
+
+    <div
+      id="fatal-error"
+      class="fatal-error"
+      role="alert"
+      hidden
+      aria-labelledby="fatal-error-title"
+      data-testid="fatal-error"
+    >
+      <div class="fatal-card">
+        <h2 id="fatal-error-title">查看器无法启动</h2>
+        <p id="fatal-error-message" data-testid="fatal-error-message"></p>
+        <p class="fatal-hint">
+          所需资源缺失或校验失败，查看器不会使用内置默认值伪造数据。请补齐发布包中的
+          <code>data/dataset.json</code> 与 <code>data/keyboard-nav.json</code> 后刷新页面。
+        </p>
+      </div>
+    </div>
+
+    <a class="skip-link" href="#object-list">跳到对象列表</a>
+
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <h1>三维合成点集浏览器</h1>
+          <p class="brand-subtitle">鼠标拾取 · 键盘导航 · 遮挡识别 · 可配置相机</p>
+        </div>
+      </div>
+      <p class="data-warning" role="note">
+        <strong>演示数据：</strong>全部点与轨迹为程序化合成，仅用于交互测试，<em>不是真实天体测量</em>。
+      </p>
+    </header>
+
+    <main class="app-layout">
+      <section class="stage" aria-label="三维视图区域">
+        <div class="toolbar" aria-label="视图控制">
+          <label class="control">
+            <span>键盘规则</span>
+            <select id="nav-mode" data-testid="nav-mode">
+              <option value="list">列表顺序</option>
+              <option value="spatial">空间邻接</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>聚焦相机</span>
+            <select id="camera-strategy" data-testid="camera-strategy">
+              <option value="fixed" selected>保持视角</option>
+              <option value="pan">轻柔平移</option>
+              <option value="orbit">限幅环绕</option>
+            </select>
+          </label>
+          <label class="control control-check">
+            <input id="include-hidden" data-testid="include-hidden" type="checkbox" />
+            <span>空间导航包含隐藏对象</span>
+          </label>
+          <button id="btn-reset" data-testid="btn-reset" class="button button-quiet" type="button">
+            重置视角
+          </button>
+        </div>
+
+        <div
+          id="viewport"
+          class="viewport"
+          tabindex="0"
+          role="application"
+          aria-label="三维视图：方向键导航对象，F 受控定位，H 切换隐藏对象，R 重置视角，Esc 清除焦点"
+          aria-describedby="viewport-help"
+          data-testid="viewport"
+        >
+          <canvas id="scene-canvas" data-testid="scene-canvas"></canvas>
+          <div id="focus-ring" class="focus-ring" hidden aria-hidden="true" data-testid="focus-ring"></div>
+          <div id="occluder-ring" class="occluder-ring" hidden aria-hidden="true"></div>
+          <div id="focus-callout" class="focus-callout" hidden>
+            <span class="callout-name"></span>
+            <span class="callout-meta"></span>
+          </div>
+          <div class="legend" role="note" aria-label="分组图例">
+            <span class="legend-title" aria-hidden="true">分组</span>
+            <ul id="legend-list" aria-hidden="true"></ul>
+          </div>
+          <div class="viewport-hint" id="viewport-help">
+            <span><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> 导航</span>
+            <span><kbd>F</kbd> 受控定位</span>
+            <span><kbd>H</kbd> 包含隐藏</span>
+            <span><kbd>R</kbd> 重置</span>
+          </div>
+          <p class="canvas-status" id="camera-status" data-testid="camera-status" aria-live="off"></p>
+        </div>
+      </section>
+
+      <aside class="sidebar" aria-label="数据与详情面板">
+        <section class="panel dataset-panel" aria-labelledby="dataset-title">
+          <div class="panel-heading">
+            <h2 id="dataset-title">数据集</h2>
+            <span class="pill" id="dataset-count" data-testid="dataset-count"></span>
+          </div>
+          <p id="dataset-disclaimer" data-testid="dataset-disclaimer" class="dataset-note"></p>
+          <p class="dataset-units">坐标单位 <code>su</code>（合成单位） · 投影为演示用途</p>
+          <div
+            id="resource-status"
+            class="resource-status"
+            role="group"
+            aria-labelledby="resource-status-title"
+            data-testid="resource-status"
+          >
+            <h3 id="resource-status-title">运行资源状态</h3>
+            <ul id="resource-status-list" class="resource-status-list" data-testid="resource-status-list"></ul>
+          </div>
+        </section>
+
+        <section class="panel list-panel" aria-labelledby="list-title">
+          <div class="panel-heading">
+            <h2 id="list-title">对象</h2>
+            <span class="pill" id="visible-count" data-testid="visible-count"></span>
+          </div>
+          <div class="list-controls">
+            <label class="control control-compact">
+              <span>排序</span>
+              <select id="sort-mode" data-testid="sort-mode">
+                <option value="scene">场景顺序</option>
+                <option value="name">名称</option>
+                <option value="distance">距原点</option>
+                <option value="group">分组</option>
+              </select>
+            </label>
+            <button
+              id="btn-reverse-sort"
+              data-testid="btn-reverse-sort"
+              class="button button-quiet"
+              type="button"
+              aria-pressed="false"
+            >
+              反向
+            </button>
+          </div>
+          <p class="list-rule" id="list-rule" data-testid="list-rule">
+            列表顺序：↑/← 上一项，↓/→ 下一项。排序或反向不会改变焦点身份。
+          </p>
+          <ul
+            id="object-list"
+            class="object-list"
+            role="listbox"
+            aria-labelledby="list-title"
+            aria-describedby="list-rule"
+            tabindex="0"
+            data-testid="object-list"
+          ></ul>
+        </section>
+
+        <section class="panel inspector-panel" id="inspector" aria-labelledby="inspector-title">
+          <div class="panel-heading">
+            <h2 id="inspector-title">对象详情</h2>
+            <span id="inspector-status" class="pill" data-testid="inspector-status"></span>
+          </div>
+          <p id="inspector-empty" class="empty-state">
+            尚未聚焦。用鼠标点击三维对象，或在列表中使用方向键选择一个真实绘制的对象。
+          </p>
+          <div id="inspector-content" hidden>
+            <h3 id="detail-name" class="detail-name" data-testid="detail-name"></h3>
+            <p id="detail-sentence" class="detail-sentence" data-testid="detail-sentence"></p>
+            <dl class="detail-grid">
+              <div>
+                <dt>稳定 ID</dt>
+                <dd id="detail-id" data-testid="detail-id"></dd>
+              </div>
+              <div>
+                <dt>分组</dt>
+                <dd id="detail-group" data-testid="detail-group"></dd>
+              </div>
+              <div>
+                <dt>轨迹</dt>
+                <dd id="detail-trajectory" data-testid="detail-trajectory"></dd>
+              </div>
+              <div>
+                <dt>坐标 (su)</dt>
+                <dd id="detail-coords" data-testid="detail-coords"></dd>
+              </div>
+              <div>
+                <dt>距原点</dt>
+                <dd id="detail-distance" data-testid="detail-distance"></dd>
+              </div>
+              <div>
+                <dt>合成光谱类别</dt>
+                <dd id="detail-spectral" data-testid="detail-spectral"></dd>
+              </div>
+              <div>
+                <dt>合成温度</dt>
+                <dd id="detail-temp" data-testid="detail-temp"></dd>
+              </div>
+              <div>
+                <dt>合成亮度指数</dt>
+                <dd id="detail-luminosity" data-testid="detail-luminosity"></dd>
+              </div>
+              <div class="detail-wide">
+                <dt>可见性与遮挡</dt>
+                <dd id="detail-visibility" data-testid="detail-visibility"></dd>
+              </div>
+            </dl>
+            <ul id="detail-tags" class="tag-list" aria-label="标签"></ul>
+            <p id="detail-note" class="detail-note" data-testid="detail-note"></p>
+            <div class="detail-actions">
+              <button
+                id="btn-locate"
+                data-testid="btn-locate"
+                class="button button-primary"
+                type="button"
+                title="用受限角度的相机移动分离同屏对象，不会瞬间跳转"
+              >
+                受控定位
+              </button>
+              <button id="btn-toggle-hidden" data-testid="btn-toggle-hidden" class="button" type="button"></button>
+              <button id="btn-copy" data-testid="btn-copy" class="button button-quiet" type="button">
+                复制描述
+              </button>
+            </div>
+            <section class="overlap-section" id="occlusion-section" aria-labelledby="overlap-title">
+              <h4 id="overlap-title">同屏重叠与遮挡</h4>
+              <p class="overlap-summary" id="overlap-summary" data-testid="overlap-summary"></p>
+              <ul id="overlap-list" class="overlap-list" data-testid="overlap-list"></ul>
+            </section>
+          </div>
+        </section>
+
+        <section class="panel help-panel" aria-labelledby="help-title">
+          <h2 id="help-title">键盘与遮挡规则</h2>
+          <ul class="help-list">
+            <li><strong>列表顺序：</strong>按当前列表排序逐项移动；↑/← 上一项，↓/→ 下一项，Home/End 到端点。</li>
+            <li>
+              <strong>空间邻接：</strong>在屏幕投影上，选择按键方向夹角 ≤ 45° 且投影距离最近的对象；若距离并列，按稳定 ID
+              排序。默认排除隐藏对象，可用 <kbd>H</kbd> 或复选框纳入。
+            </li>
+            <li>
+              <strong>遮挡：</strong>鼠标点击优先选择最近层；详情面板列出同屏重叠栈，可逐层选择。<kbd>F</kbd>
+              或“受控定位”会用受限角度移动相机以分离对象。
+            </li>
+            <li>
+              <strong>相机：</strong>选择对象默认不移动视角；“保持视角”完全不动；“轻柔平移”是有位移上限的轻微平移；“限幅环绕”每次聚焦最多旋转
+              8°。所有移动都经过缓动，不会因按键突然大幅旋转，并可在视图左下角看到当前策略与动画状态。
+            </li>
+            <li>焦点由稳定 ID 绑定，不由列表位置决定；排序或反向不会把高亮交给另一个对象。</li>
+          </ul>
+        </section>
+      </aside>
+    </main>
+
+    <div id="live-region" class="sr-only" aria-live="polite" aria-atomic="true" data-testid="live-region"></div>
+    <div id="copy-feedback" class="sr-only" aria-live="polite"></div>
+
+  </body>
+</html>

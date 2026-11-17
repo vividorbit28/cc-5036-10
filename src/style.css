@@ -15,8 +15,32 @@
   --ok: #86efac;
   --focus-ring: #ffffff;
   --radius: 12px;
-  --font: "Avenir Next", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  --mono: "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+  --font: "ExplorerSans", "Avenir Next", "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --mono: "ExplorerMono", "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+}
+
+@font-face {
+  font-family: "ExplorerSans";
+  src: url("../fonts/explorer-sans.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ExplorerSans";
+  src: url("../fonts/explorer-sans-bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ExplorerMono";
+  src: url("../fonts/explorer-mono.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
 * {
@@ -944,4 +968,153 @@ select:focus-visible,
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+}
+
+/* Boot overlay, fatal error and runtime resource status */
+.boot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(7, 11, 20, 0.92);
+  transition: opacity 0.3s ease;
+}
+
+.boot-overlay.is-ready {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.boot-overlay[hidden] {
+  display: none;
+}
+
+.boot-card,
+.fatal-card {
+  width: min(560px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius);
+  padding: 28px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.boot-card h2,
+.fatal-card h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.boot-message,
+.fatal-hint {
+  color: var(--text-dim);
+}
+
+.boot-resource-list,
+.resource-status-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.boot-resource-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(13, 20, 34, 0.7);
+}
+
+.resource-badge {
+  flex: none;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+
+.resource-badge-loading {
+  color: var(--accent);
+}
+
+.resource-badge-ready {
+  color: var(--ok);
+}
+
+.resource-badge-error {
+  color: var(--danger);
+}
+
+.fatal-error {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(7, 11, 20, 0.96);
+}
+
+.fatal-error[hidden] {
+  display: none;
+}
+
+.fatal-card {
+  border-color: rgba(253, 164, 175, 0.55);
+}
+
+#fatal-error-message {
+  color: var(--danger);
+  font-family: var(--mono);
+  font-size: 13px;
+  margin: 10px 0;
+  word-break: break-all;
+}
+
+.resource-status {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.resource-status h3 {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.resource-status-list li {
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(13, 20, 34, 0.55);
+}
+
+.resource-status-list li[data-state="error"] {
+  border-color: rgba(253, 164, 175, 0.6);
+}
+
+.resource-status-list li[data-state="ready"] {
+  border-color: rgba(134, 239, 172, 0.35);
+}
+
+.resource-label {
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.resource-detail {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-faint);
 }

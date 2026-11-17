@@ -1,16 +1,13 @@
 import "./style.css";
+import type { DatasetIndices, SpaceObject } from "./data/dataset";
+import { distanceFromOrigin } from "./data/dataset";
+import type { GroupId } from "./data/dataset-source";
+import type { KeyboardConfig, NavDirection } from "./data/keyboardConfig";
 import {
-  DATASET_META,
-  GROUPS,
-  OBJECTS,
-  OBJECT_BY_ID,
-  OBJECT_COUNT_BY_GROUP,
-  TRAJECTORY_BY_ID,
-  TRAJECTORIES,
-  distanceFromOrigin,
-  type GroupId,
-  type SpaceObject,
-} from "./data/dataset";
+  loadResources,
+  loadUiFonts,
+  type ResourceStatus,
+} from "./data/resources";
 import {
   SpaceScene,
   type CameraStrategy,
@@ -21,7 +18,6 @@ import {
   jumpList,
   navigateList,
   navigateSpatial,
-  type NavDirection,
   type NavMode,
 } from "./scene/navigation";
 
@@ -36,14 +32,10 @@ interface AppState {
   cameraStrategy: CameraStrategy;
 }
 
-const state: AppState = {
-  focusId: null,
-  sortMode: "scene",
-  reversed: false,
-  navMode: "list",
-  includeHidden: false,
-  cameraStrategy: "fixed",
-};
+interface AppContext {
+  data: DatasetIndices;
+  keyboard: KeyboardConfig;
+}
 
 const el = {
   viewport: document.querySelector<HTMLElement>("#viewport")!,
@@ -84,9 +76,28 @@ const el = {
   legendList: document.querySelector<HTMLUListElement>("#legend-list")!,
   listRule: document.querySelector<HTMLElement>("#list-rule")!,
   cameraStatus: document.querySelector<HTMLElement>("#camera-status")!,
+  bootOverlay: document.querySelector<HTMLElement>("#boot-overlay")!,
+  bootTitle: document.querySelector<HTMLElement>("#boot-title")!,
+  bootMessage: document.querySelector<HTMLElement>("#boot-message")!,
+  bootResourceList: document.querySelector<HTMLUListElement>("#boot-resource-list")!,
+  fatalError: document.querySelector<HTMLElement>("#fatal-error")!,
+  fatalErrorMessage: document.querySelector<HTMLElement>("#fatal-error-message")!,
+  resourceStatusList: document.querySelector<HTMLUListElement>("#resource-status-list")!,
 };
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const state: AppState = {
+  focusId: null,
+  sortMode: "scene",
+  reversed: false,
+  navMode: "list",
+  includeHidden: false,
+  cameraStrategy: "fixed",
+};
+
+let ctx: AppContext | null = null;
+let scene: SpaceScene | null = null;
 
 const callbacks: SceneCallbacks = {
   onSelect: (id) => selectObject(id || null, "picker"),
@@ -97,7 +108,65 @@ const callbacks: SceneCallbacks = {
   },
 };
 
-let scene: SpaceScene | null = null;
+function requireContext(): AppContext {
+  if (!ctx) throw new Error("资源尚未加载完成，查看器未就绪。");
+  return ctx;
+}
+
+function renderBootRow(status: ResourceStatus): void {
+  let row = el.bootResourceList.querySelector<HTMLElement>(`[data-resource="${status.key}"]`);
+  if (!row) {
+    row = document.createElement("li");
+    row.dataset.resource = status.key;
+    el.bootResourceList.append(row);
+  }
+  const label = document.createElement("span");
+  label.className = "boot-resource-label";
+  label.textContent = status.label;
+  const stateBadge = document.createElement("span");
+  stateBadge.className = `resource-badge resource-badge-${status.state}`;
+  stateBadge.textContent =
+    status.state === "loading" ? "加载中" : status.state === "ready" ? "就绪" : "异常";
+  row.replaceChildren(label, stateBadge);
+}
+
+function renderResourcePanel(statuses: ResourceStatus[]): void {
+  el.resourceStatusList.replaceChildren();
+  for (const status of statuses) {
+    const item = document.createElement("li");
+    item.dataset.resource = status.key;
+    item.dataset.state = status.state;
+    item.dataset.testid = `resource-status-${status.key}`;
+    const label = document.createElement("span");
+    label.className = "resource-label";
+    label.textContent = status.label;
+    const badge = document.createElement("span");
+    badge.className = `resource-badge resource-badge-${status.state}`;
+    badge.textContent =
+      status.state === "loading" ? "加载中" : status.state === "ready" ? "就绪" : "异常";
+    const detail = document.createElement("p");
+    detail.className = "resource-detail";
+    detail.textContent = status.detail;
+    item.append(label, badge, detail);
+    el.resourceStatusList.append(item);
+  }
+}
+
+function showFatalError(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  el.bootTitle.textContent = "资源加载失败";
+  el.bootMessage.textContent = "查看器已停止引导，未使用任何内置默认值替代缺失资源。";
+  el.fatalErrorMessage.textContent = message;
+  el.fatalError.hidden = false;
+  el.liveRegion.textContent = `查看器无法启动：${message}`;
+  const failedStatus: ResourceStatus = {
+    key: "fatal",
+    label: "必需资源",
+    state: "error",
+    detail: message,
+  };
+  renderBootRow(failedStatus);
+}
 
 function formatNumber(value: number, digits = 2): string {
   return value.toFixed(digits);
@@ -108,13 +177,14 @@ function formatCoords(object: SpaceObject): string {
 }
 
 function sortObjects(mode: SortMode): SpaceObject[] {
-  const copy = [...OBJECTS];
+  const { data } = requireContext();
+  const copy = [...data.objects];
   if (mode === "name") {
     copy.sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN") || a.id.localeCompare(b.id));
   } else if (mode === "distance") {
     copy.sort((a, b) => distanceFromOrigin(a) - distanceFromOrigin(b) || a.id.localeCompare(b.id));
   } else if (mode === "group") {
-    const order = Object.keys(GROUPS) as GroupId[];
+    const order = Object.keys(data.groups) as GroupId[];
     copy.sort(
       (a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.id.localeCompare(b.id),
     );
@@ -159,9 +229,13 @@ function updateCameraStatus(): void {
   el.cameraStatus.title = `当前相机策略：${label}`;
 }
 
-function describeObject(object: SpaceObject, info: ReturnType<SpaceScene["screenInfoFor"]> | null): string {
-  const group = GROUPS[object.group];
-  const trajectory = object.trajectoryId ? TRAJECTORY_BY_ID.get(object.trajectoryId) : null;
+function describeObject(
+  object: SpaceObject,
+  info: ReturnType<SpaceScene["screenInfoFor"]> | null,
+): string {
+  const { data } = requireContext();
+  const group = data.groups[object.group];
+  const trajectory = object.trajectoryId ? data.trajectoryById.get(object.trajectoryId) : null;
   const parts = [
     `${object.name}（稳定 ID ${object.id}）属于${group.label}。`,
     `合成坐标 ${formatCoords(object)} 合成单位，距原点 ${formatNumber(distanceFromOrigin(object))} 合成单位。`,
@@ -179,10 +253,11 @@ function describeObject(object: SpaceObject, info: ReturnType<SpaceScene["screen
 }
 
 function renderDatasetHeader(): void {
-  el.datasetCount.textContent = `${OBJECTS.length} 个合成点`;
-  el.datasetDisclaimer.textContent = DATASET_META.disclaimer;
+  const { data } = requireContext();
+  el.datasetCount.textContent = `${data.objects.length} 个合成点`;
+  el.datasetDisclaimer.textContent = data.meta.disclaimer;
   el.legendList.innerHTML = "";
-  for (const group of Object.values(GROUPS)) {
+  for (const group of Object.values(data.groups)) {
     const item = document.createElement("li");
     const dot = document.createElement("span");
     dot.className = "legend-dot";
@@ -190,17 +265,19 @@ function renderDatasetHeader(): void {
     dot.style.background = group.color;
     const count = document.createElement("span");
     count.className = "legend-count";
-    count.textContent = String(OBJECT_COUNT_BY_GROUP[group.id] ?? 0);
+    count.textContent = String(data.countByGroup[group.id] ?? 0);
     const label = document.createElement("span");
     label.textContent = group.label;
     item.append(dot, label, count);
     el.legendList.append(item);
   }
   const visible = scene ? scene.hiddenCount() : 0;
-  el.visibleCount.textContent = `隐藏 ${visible} · 可见 ${OBJECTS.length - visible}`;
+  el.visibleCount.textContent = `隐藏 ${visible} · 可见 ${data.objects.length - visible}`;
 }
 
 function renderList(): void {
+  if (!ctx || !scene) return;
+  const { data, keyboard } = ctx;
   const objects = currentOrderedObjects();
   const projections = projectionMap();
   const preservedScroll = el.objectList.scrollTop;
@@ -223,15 +300,15 @@ function renderList(): void {
     const hiddenNote = hidden ? "，已隐藏" : occluded ? `，被 ${info?.occludedBy} 个更近对象遮挡` : "";
     li.setAttribute(
       "aria-label",
-      `${object.name}，${GROUPS[object.group].label}，距原点 ${formatNumber(distanceFromOrigin(object))} 合成单位${hiddenNote}`,
+      `${object.name}，${data.groups[object.group].label}，距原点 ${formatNumber(distanceFromOrigin(object))} 合成单位${hiddenNote}`,
     );
     if (hidden) li.classList.add("is-hidden");
     li.tabIndex = -1;
 
     const dot = document.createElement("span");
     dot.className = "item-dot";
-    dot.style.color = GROUPS[object.group].color;
-    dot.style.background = GROUPS[object.group].color;
+    dot.style.color = data.groups[object.group].color;
+    dot.style.background = data.groups[object.group].color;
 
     const main = document.createElement("span");
     main.className = "item-main";
@@ -241,7 +318,7 @@ function renderList(): void {
     const sub = document.createElement("span");
     sub.className = "item-sub";
     const depthText = projection ? `d=${formatNumber(projection.depth, 1)} su` : "屏幕外";
-    sub.textContent = `${GROUPS[object.group].label} · ${depthText}`;
+    sub.textContent = `${data.groups[object.group].label} · ${depthText}`;
     main.append(name, sub);
 
     const badges = document.createElement("span");
@@ -272,25 +349,22 @@ function renderList(): void {
     el.objectList.append(li);
   }
 
-  const ordered = objects;
-  const focusIndex = state.focusId ? ordered.findIndex((object) => object.id === state.focusId) : -1;
   el.listRule.textContent =
-    state.navMode === "list"
-      ? "列表顺序：↑/← 上一项，↓/→ 下一项。排序或反向不会改变焦点身份。"
-      : "空间邻接：↑/↓/←/→ 在屏幕投影中选择该方向 45° 内最近的对象；隐藏对象默认排除。";
+    state.navMode === "list" ? keyboard.help.listRule : keyboard.help.spatialRule;
 
   if (state.focusId) {
     el.objectList.setAttribute("aria-activedescendant", `object-option-${state.focusId}`);
     scrollListItemIntoView(state.focusId);
   }
-  void focusIndex;
   el.objectList.scrollTop = preservedScroll;
-  el.visibleCount.textContent = `隐藏 ${scene?.hiddenCount() ?? 0} · 可见 ${OBJECTS.length - (scene?.hiddenCount() ?? 0)}`;
+  el.visibleCount.textContent = `隐藏 ${scene?.hiddenCount() ?? 0} · 可见 ${data.objects.length - (scene?.hiddenCount() ?? 0)}`;
 }
 
 function renderInspector(): void {
-  const focus = state.focusId ? OBJECT_BY_ID.get(state.focusId) : null;
-  if (!focus || !scene) {
+  if (!ctx || !scene) return;
+  const { data } = ctx;
+  const focus = state.focusId ? data.objectById.get(state.focusId) : null;
+  if (!focus) {
     el.inspectorEmpty.hidden = false;
     el.inspectorContent.hidden = true;
     el.inspectorStatus.textContent = "未聚焦";
@@ -299,8 +373,8 @@ function renderInspector(): void {
   }
   const info = scene.screenInfoFor(focus.id);
   const hidden = scene.isHidden(focus.id);
-  const group = GROUPS[focus.group];
-  const trajectory = focus.trajectoryId ? TRAJECTORY_BY_ID.get(focus.trajectoryId) : null;
+  const group = data.groups[focus.group];
+  const trajectory = focus.trajectoryId ? data.trajectoryById.get(focus.trajectoryId) : null;
 
   el.inspectorEmpty.hidden = true;
   el.inspectorContent.hidden = false;
@@ -349,10 +423,13 @@ function renderInspector(): void {
   renderOverlap(focus, info);
 }
 
-function renderOverlap(focus: SpaceObject, info: ReturnType<SpaceScene["screenInfoFor"]>): void {
+function renderOverlap(
+  focus: SpaceObject,
+  info: ReturnType<SpaceScene["screenInfoFor"]>,
+): void {
   el.overlapList.innerHTML = "";
   if (info.hidden) {
-    el.overlapSummary.textContent = "对象已隐藏，不参与鼠标拾取与遮挡栈；键键盘聚焦依旧按稳定 ID 生效。";
+    el.overlapSummary.textContent = "对象已隐藏，不参与鼠标拾取与遮挡栈；键盘聚焦依旧按稳定 ID 生效。";
     return;
   }
   if (info.overlapStack.length <= 1) {
@@ -389,7 +466,8 @@ function renderOverlap(focus: SpaceObject, info: ReturnType<SpaceScene["screenIn
 }
 
 function objectFocusFeedback(id: string): void {
-  const object = OBJECT_BY_ID.get(id);
+  const { data } = requireContext();
+  const object = data.objectById.get(id);
   if (!object) return;
   const info = scene?.screenInfoFor(id) ?? null;
   const hidden = scene?.isHidden(id) ?? false;
@@ -407,7 +485,7 @@ function updateSelectionUi(): void {
   scene.setFocus(focusId);
 
   if (focusId) {
-    const object = OBJECT_BY_ID.get(focusId);
+    const object = requireContext().data.objectById.get(focusId);
     const info = scene.screenInfoFor(focusId);
     const hidden = scene.isHidden(focusId);
     if (object) {
@@ -447,7 +525,7 @@ function scrollListItemIntoView(id: string): void {
 }
 
 function selectObject(id: string | null, source: "picker" | "list" | "overlap" | "nav" | "toggle"): void {
-  if (id && !OBJECT_BY_ID.has(id)) return;
+  if (id && !requireContext().data.objectById.has(id)) return;
   const changed = state.focusId !== id;
   state.focusId = id;
   updateSelectionUi();
@@ -463,14 +541,23 @@ function selectObject(id: string | null, source: "picker" | "list" | "overlap" |
   void source;
 }
 
+function directionForKey(key: string): NavDirection | null {
+  const { keyboard } = requireContext();
+  for (const direction of ["up", "down", "left", "right"] as NavDirection[]) {
+    if (keyboard.spatial.directions[direction] === key) return direction;
+  }
+  return null;
+}
+
 function moveFocus(direction: NavDirection): void {
-  if (!scene) return;
+  if (!scene || !ctx) return;
+  const { keyboard } = ctx;
   const projections = scene.projectionEntries();
   let nextId: string | null = null;
   if (state.navMode === "list") {
-    nextId = navigateList(state.focusId, orderedIds(), direction);
+    nextId = navigateList(state.focusId, orderedIds(), direction, keyboard);
   } else {
-    nextId = navigateSpatial(state.focusId, projections, direction, state.includeHidden);
+    nextId = navigateSpatial(state.focusId, projections, direction, state.includeHidden, keyboard);
   }
   if (!nextId) {
     if (state.navMode === "spatial") {
@@ -485,71 +572,70 @@ function moveFocus(direction: NavDirection): void {
 }
 
 function handleViewportKey(event: KeyboardEvent): void {
+  if (!ctx) return;
+  const { keyboard } = ctx;
   const key = event.key;
-  const directions: Record<string, NavDirection> = {
-    ArrowUp: "up",
-    ArrowDown: "down",
-    ArrowLeft: "left",
-    ArrowRight: "right",
-  };
-  if (directions[key]) {
+  const direction = directionForKey(key);
+  if (direction) {
     event.preventDefault();
-    moveFocus(directions[key]);
+    moveFocus(direction);
     return;
   }
-  if (key === "Home") {
+  if (keyboard.list.jumpToStart.includes(key)) {
     event.preventDefault();
     const id = jumpList(orderedIds(), "start");
     if (id) selectObject(id, "nav");
     return;
   }
-  if (key === "End") {
+  if (keyboard.list.jumpToEnd.includes(key)) {
     event.preventDefault();
     const id = jumpList(orderedIds(), "end");
     if (id) selectObject(id, "nav");
     return;
   }
-  if (key === "f" || key === "F") {
+  if (key.toLowerCase() === keyboard.global.locateKey.toLowerCase()) {
     event.preventDefault();
     locateFocused();
     return;
   }
-  if (key === "h" || key === "H") {
+  if (key.toLowerCase() === keyboard.global.hiddenToggleKey.toLowerCase()) {
     event.preventDefault();
     toggleSpatialHidden();
     return;
   }
-  if (key === "r" || key === "R") {
+  if (key.toLowerCase() === keyboard.global.resetKey.toLowerCase()) {
     event.preventDefault();
     scene?.resetCamera();
     announce("视角已重置。");
     return;
   }
-  if (key === "Escape") {
+  if (keyboard.list.clearFocus.includes(key)) {
     event.preventDefault();
     selectObject(null, "nav");
   }
 }
 
 function handleGlobalShortcut(event: KeyboardEvent): void {
+  if (!ctx) return;
+  const { keyboard } = ctx;
   if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
   const target = event.target as HTMLElement | null;
   if (target && (target.closest("input, select, textarea, button") || target.isContentEditable)) {
     return;
   }
   const key = event.key.toLowerCase();
-  if (key === "f") {
+  if (key === keyboard.global.locateKey.toLowerCase()) {
     if (!state.focusId) return;
     event.preventDefault();
     locateFocused();
     return;
   }
-  if (key === "h") {
+  if (key === keyboard.global.hiddenToggleKey.toLowerCase()) {
     event.preventDefault();
     toggleSpatialHidden();
     return;
   }
-  if (key === "r") {
+  if (key === keyboard.global.resetKey.toLowerCase()) {
     event.preventDefault();
     scene?.resetCamera();
     announce("视角已重置。");
@@ -567,7 +653,7 @@ function locateFocused(): void {
     return;
   }
   const moved = scene?.focusCamera(state.focusId) ?? false;
-  const name = OBJECT_BY_ID.get(state.focusId)?.name ?? "";
+  const name = requireContext().data.objectById.get(state.focusId)?.name ?? "";
   announce(
     moved
       ? `已使用${state.cameraStrategy === "pan" ? "轻柔平移" : "限幅环绕"}定位 ${name}。`
@@ -576,6 +662,7 @@ function locateFocused(): void {
 }
 
 function toggleSpatialHidden(): void {
+  if (!ctx) return;
   state.includeHidden = !state.includeHidden;
   el.includeHidden.checked = state.includeHidden;
   announce(
@@ -586,24 +673,25 @@ function toggleSpatialHidden(): void {
 }
 
 function handleListKey(event: KeyboardEvent): void {
-  const directions: Record<string, NavDirection> = {
-    ArrowUp: "up",
-    ArrowLeft: "left",
-    ArrowDown: "down",
-    ArrowRight: "right",
-  };
-  if (event.key in directions) {
+  if (!ctx) return;
+  const { keyboard } = ctx;
+  const direction = directionForKey(event.key);
+  if (direction) {
     event.preventDefault();
-    moveFocus(directions[event.key]);
+    moveFocus(direction);
     return;
   }
-  if (event.key === "Home" || event.key === "End") {
+  if (
+    keyboard.list.jumpToStart.includes(event.key) ||
+    keyboard.list.jumpToEnd.includes(event.key)
+  ) {
     event.preventDefault();
-    const id = jumpList(orderedIds(), event.key === "Home" ? "start" : "end");
+    const edge = keyboard.list.jumpToStart.includes(event.key) ? "start" : "end";
+    const id = jumpList(orderedIds(), edge);
     if (id) selectObject(id, "nav");
     return;
   }
-  if (event.key === "Enter" || event.key === " ") {
+  if (keyboard.list.activate.includes(event.key)) {
     if (!state.focusId) return;
     event.preventDefault();
     const moved = scene?.focusCamera(state.focusId) ?? false;
@@ -654,7 +742,7 @@ function bindControls(): void {
   el.locateButton.addEventListener("click", () => {
     if (!state.focusId) return;
     const moved = scene?.focusCamera(state.focusId) ?? false;
-    const object = OBJECT_BY_ID.get(state.focusId);
+    const object = requireContext().data.objectById.get(state.focusId);
     announce(
       moved
         ? `已使用受控定位聚焦 ${object?.name ?? ""}，相机移动经过缓动并受角度限制。`
@@ -670,14 +758,14 @@ function bindControls(): void {
     renderInspector();
     renderDatasetHeader();
     scene.setFocus(state.focusId);
-    const name = OBJECT_BY_ID.get(state.focusId)?.name ?? "";
+    const name = requireContext().data.objectById.get(state.focusId)?.name ?? "";
     announce(nextHidden ? `${name} 已隐藏，鼠标不可拾取。` : `${name} 已重新显示。`);
     el.objectList.focus();
   });
 
   el.copyButton.addEventListener("click", async () => {
-    if (!state.focusId) return;
-    const object = OBJECT_BY_ID.get(state.focusId);
+    if (!state.focusId || !ctx) return;
+    const object = ctx.data.objectById.get(state.focusId);
     if (!object) return;
     const info = scene?.screenInfoFor(object.id) ?? null;
     const text = `${describeObject(object, info)} 稳定 ID：${object.id}；坐标单位：合成单位 su。注意：这是程序化演示数据，不是真实天体测量。`;
@@ -698,18 +786,9 @@ function bindControls(): void {
   });
 }
 
-function boot(): void {
-  renderDatasetHeader();
-  scene = new SpaceScene(
-    el.viewport,
-    callbacks,
-    { reducedMotion },
-  );
-  renderList();
-  renderInspector();
-  bindControls();
-  updateCameraStatus();
-
+function exposeVerificationSurface(): void {
+  if (!ctx || !scene) return;
+  const { data, keyboard } = ctx;
   // Expose a narrow, read-only surface for automated verification. It reads
   // the same scene state the UI uses instead of duplicating geometry.
   Object.defineProperty(window, "__spaceApp", {
@@ -721,7 +800,7 @@ function boot(): void {
         navMode: state.navMode,
         includeHidden: state.includeHidden,
         cameraStrategy: state.cameraStrategy,
-        hiddenIds: [...(scene ? OBJECTS.filter((object) => scene!.isHidden(object.id)).map((o) => o.id) : [])],
+        hiddenIds: data.objects.filter((object) => scene!.isHidden(object.id)).map((o) => o.id),
       }),
       getFocusScreen: () => scene?.focusScreenPosition() ?? null,
       highlightedIds: () => scene?.highlightedObjectIds() ?? [],
@@ -735,8 +814,15 @@ function boot(): void {
         moving: scene?.isCameraAnimating() ?? false,
       }),
       resetCamera: () => scene?.resetCamera(),
-      objectIds: () => OBJECTS.map((object) => object.id),
-      trajectories: () => TRAJECTORIES.map((trajectory) => trajectory.id),
+      objectIds: () => data.objects.map((object) => object.id),
+      trajectories: () => data.trajectories.map((trajectory) => trajectory.id),
+      keyboardConfig: () => keyboard,
+      resourceStatus: () =>
+        [...el.resourceStatusList.querySelectorAll<HTMLElement>("li")].map((item) => ({
+          resource: item.dataset.resource,
+          state: item.dataset.state,
+          detail: item.querySelector(".resource-detail")?.textContent ?? "",
+        })),
       focusRingRect: () => {
         const ring = document.querySelector<HTMLElement>("#focus-ring");
         if (!ring || ring.hidden) return null;
@@ -754,4 +840,73 @@ function boot(): void {
   });
 }
 
-boot();
+function startApp(loaded: AppContext, resourceStatuses: ResourceStatus[]): void {
+  ctx = loaded;
+  state.includeHidden = loaded.keyboard.spatial.includeHiddenByDefault;
+  el.includeHidden.checked = state.includeHidden;
+
+  scene = new SpaceScene(
+    el.viewport,
+    callbacks,
+    { reducedMotion, data: loaded.data },
+  );
+  renderDatasetHeader();
+  renderList();
+  renderInspector();
+  bindControls();
+  updateCameraStatus();
+  renderResourcePanel(resourceStatuses);
+  exposeVerificationSurface();
+
+  el.bootOverlay.classList.add("is-ready");
+  window.setTimeout(() => {
+    el.bootOverlay.hidden = true;
+  }, 350);
+  announce(
+    `查看器已就绪：${loaded.data.objects.length} 个合成点，键盘导航配置与字体均已从发布包加载。`,
+  );
+}
+
+async function boot(): Promise<void> {
+  const loadingStatuses: ResourceStatus[] = [
+    { key: "dataset", label: "数据样例 data/dataset.json", state: "loading", detail: "正在获取。" },
+    { key: "keyboard", label: "键盘导航配置 data/keyboard-nav.json", state: "loading", detail: "正在获取。" },
+    { key: "font", label: "界面字体（自托管 WOFF2）", state: "loading", detail: "正在加载。" },
+  ];
+  for (const status of loadingStatuses) renderBootRow(status);
+
+  let fontStatus: ResourceStatus;
+  let loaded: AppContext;
+  try {
+    // Fonts load in parallel but never gate boot; their failure is reported.
+    const [resources, fontResult] = await Promise.all([
+      loadResources(),
+      loadUiFonts(),
+    ]);
+    loaded = { data: resources.dataset, keyboard: resources.keyboard };
+    fontStatus = fontResult;
+  } catch (error) {
+    showFatalError(error);
+    return;
+  }
+
+  const statuses: ResourceStatus[] = [
+    {
+      key: "dataset",
+      label: "数据样例 data/dataset.json",
+      state: "ready",
+      detail: `${loaded.data.objects.length} 个对象、${loaded.data.trajectories.length} 条轨迹已通过校验。`,
+    },
+    {
+      key: "keyboard",
+      label: "键盘导航配置 data/keyboard-nav.json",
+      state: "ready",
+      detail: `列表与空间键位已加载，空间锥角 ${loaded.keyboard.spatial.maxConeAngleDeg}°。`,
+    },
+    fontStatus,
+  ];
+  for (const status of statuses) renderBootRow(status);
+  startApp(loaded, statuses);
+}
+
+void boot();

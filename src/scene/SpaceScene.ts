@@ -3,13 +3,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
-import {
-  DATASET_CAMERA,
-  GROUPS,
-  OBJECTS,
-  TRAJECTORIES,
-  type SpaceObject,
-} from "../data/dataset";
+import type { DatasetIndices, GroupId, SpaceObject } from "../data/dataset";
 
 export const HIGHLIGHT_COLOR = "#ffffff";
 export const OCCLUDER_COLOR = "#fda4af";
@@ -64,6 +58,7 @@ export interface SceneCallbacks {
 
 export interface SceneOptions {
   reducedMotion: boolean;
+  data: DatasetIndices;
 }
 
 interface PointVisual {
@@ -71,13 +66,6 @@ interface PointVisual {
   mesh: THREE.Mesh;
   glow: THREE.Sprite;
 }
-
-const GROUP_COLORS = Object.fromEntries(
-  (Object.keys(GROUPS) as Array<keyof typeof GROUPS>).map((key) => [
-    key,
-    new THREE.Color(GROUPS[key].color),
-  ]),
-) as Record<keyof typeof GROUPS, THREE.Color>;
 
 function makeGlowTexture(): THREE.Texture {
   const size = 128;
@@ -115,6 +103,8 @@ function makeHiddenOutlineTexture(): THREE.Texture {
 }
 
 export class SpaceScene {
+  private readonly data: DatasetIndices;
+  private readonly groupColors: Record<GroupId, THREE.Color>;
   private readonly canvas: HTMLCanvasElement;
   private readonly callbacks: SceneCallbacks;
   private readonly renderer: THREE.WebGLRenderer;
@@ -130,8 +120,8 @@ export class SpaceScene {
   private readonly cameraStatusEl: HTMLElement;
   private readonly resizeObserver: ResizeObserver;
   private readonly reducedMotion: boolean;
-  private readonly initialCamera = new THREE.Vector3(...DATASET_CAMERA.position);
-  private readonly initialTarget = new THREE.Vector3(...DATASET_CAMERA.target);
+  private readonly initialCamera: THREE.Vector3;
+  private readonly initialTarget: THREE.Vector3;
   private readonly projectionScratch = new THREE.Vector3();
   private readonly cameraDirection = new THREE.Vector3();
 
@@ -154,6 +144,13 @@ export class SpaceScene {
   private readonly highlightedIds = new Set<string>();
 
   constructor(container: HTMLElement, callbacks: SceneCallbacks, options: SceneOptions) {
+    this.data = options.data;
+    this.groupColors = Object.fromEntries(
+      (Object.keys(this.data.groups) as GroupId[]).map((key) => [
+        key,
+        new THREE.Color(this.data.groups[key].color),
+      ]),
+    ) as Record<GroupId, THREE.Color>;
     this.canvas = container.querySelector<HTMLCanvasElement>("#scene-canvas")!;
     this.callbacks = callbacks;
     this.reducedMotion = options.reducedMotion;
@@ -161,6 +158,9 @@ export class SpaceScene {
     this.occluderRing = document.querySelector<HTMLDivElement>("#occluder-ring")!;
     this.focusCallout = document.querySelector<HTMLElement>("#focus-callout")!;
     this.cameraStatusEl = document.querySelector<HTMLElement>("#camera-status")!;
+
+    this.initialCamera = new THREE.Vector3(...this.data.camera.position);
+    this.initialTarget = new THREE.Vector3(...this.data.camera.target);
 
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -171,7 +171,7 @@ export class SpaceScene {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2.5));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-    this.camera = new THREE.PerspectiveCamera(DATASET_CAMERA.fov, 1, 0.1, 400);
+    this.camera = new THREE.PerspectiveCamera(this.data.camera.fov, 1, 0.1, 400);
     this.camera.position.copy(this.initialCamera);
 
     this.controls = new OrbitControls(this.camera, this.canvas);
@@ -217,7 +217,7 @@ export class SpaceScene {
 
     this.animate();
     this.publishStatus("已就绪", true);
-    for (const object of OBJECTS) {
+    for (const object of this.data.objects) {
       if (object.initiallyHidden) {
         this.hiddenIds.add(object.id);
         this.applyVisibility(object.id);
@@ -281,8 +281,8 @@ export class SpaceScene {
   }
 
   private buildObjects(): void {
-    for (const object of OBJECTS) {
-      const baseColor = GROUP_COLORS[object.group] ?? GROUP_COLORS.echo;
+    for (const object of this.data.objects) {
+      const baseColor = this.groupColors[object.group] ?? this.groupColors.echo;
       const mesh = new THREE.Mesh(
         new THREE.SphereGeometry(0.17, 20, 16),
         new THREE.MeshStandardMaterial({
@@ -315,7 +315,7 @@ export class SpaceScene {
   }
 
   private buildTrajectories(): void {
-    for (const trajectory of TRAJECTORIES) {
+    for (const trajectory of this.data.trajectories) {
       const geometry = new LineGeometry();
       const points = trajectory.closed
         ? [...trajectory.points, trajectory.points[0]]
@@ -323,7 +323,7 @@ export class SpaceScene {
       geometry.setPositions(points.flatMap((point) => [...point]));
 
       const material = new LineMaterial({
-        color: new THREE.Color(GROUPS[trajectory.group].color).multiplyScalar(0.78),
+        color: new THREE.Color(this.data.groups[trajectory.group].color).multiplyScalar(0.78),
         linewidth: trajectory.dashed ? 1.15 : 1.8,
         transparent: true,
         opacity: trajectory.dashed ? 0.56 : 0.74,
@@ -463,7 +463,7 @@ export class SpaceScene {
     const cameraPos = this.camera.position;
     this.camera.getWorldDirection(this.cameraDirection);
     const entries: ProjectionEntry[] = [];
-    for (const object of OBJECTS) {
+    for (const object of this.data.objects) {
       const world = new THREE.Vector3(...object.position);
       const toPoint = world.clone().sub(cameraPos);
       const inFront = this.cameraDirection.dot(toPoint) > 0;
@@ -622,7 +622,7 @@ export class SpaceScene {
         : "可见 · 无遮挡";
     if (nameEl) nameEl.textContent = object.name;
     if (metaEl) {
-      metaEl.textContent = `${GROUPS[object.group].label} · d=${projected.depth.toFixed(1)} su · ${status}`;
+      metaEl.textContent = `${this.data.groups[object.group].label} · d=${projected.depth.toFixed(1)} su · ${status}`;
     }
     this.focusCallout.dataset.focusId = this.focusId;
   }
@@ -659,7 +659,7 @@ export class SpaceScene {
       const material = visual.mesh.material as THREE.MeshStandardMaterial;
       const glowMaterial = visual.glow.material as THREE.SpriteMaterial;
       if (visual.object.id === this.focusId) continue;
-      const base = GROUP_COLORS[visual.object.group] ?? GROUP_COLORS.echo;
+      const base = this.groupColors[visual.object.group] ?? this.groupColors.echo;
       material.color.copy(base);
       material.emissive.copy(base).multiplyScalar(0.42);
       glowMaterial.color.copy(base);
@@ -698,7 +698,7 @@ export class SpaceScene {
     for (const [id, visual] of this.pointVisuals) {
       const material = visual.mesh.material as THREE.MeshStandardMaterial;
       const glowMaterial = visual.glow.material as THREE.SpriteMaterial;
-      const base = GROUP_COLORS[visual.object.group] ?? GROUP_COLORS.echo;
+      const base = this.groupColors[visual.object.group] ?? this.groupColors.echo;
       const isFocus = id === this.focusId;
       if (isFocus) {
         this.highlightedIds.add(id);

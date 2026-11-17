@@ -6,9 +6,15 @@
   "description": "三维合成点集查询与无障碍键盘导航演示",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 4173",
-    "build": "tsc --noEmit && vite build",
+    "resources:fonts": "node scripts/build-fonts.mjs",
+    "resources:dataset": "node --experimental-strip-types scripts/build-dataset.mjs",
+    "resources:build": "npm run resources:fonts && npm run resources:dataset",
+    "build": "npm run resources:build && tsc --noEmit && vite build",
+    "build:release": "npm run build && node scripts/make-release.mjs",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "release:serve": "node scripts/serve-release.mjs",
     "test": "playwright test",
+    "test:release": "playwright test --config=playwright.release.config.ts",
     "test:headed": "playwright test --headed"
   },
   "dependencies": {
@@ -19,6 +25,7 @@
     "@types/three": "^0.187.0",
     "pngjs": "^7.0.0",
     "typescript": "^7.0.2",
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "wawoff2": "^2.0.1"
   }
 }
