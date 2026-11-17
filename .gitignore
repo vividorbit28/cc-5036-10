@@ -23,3 +23,9 @@ __pycache__/
 *.log
 .env
 .env.*
+
+# local test infrastructure and artifacts
+.browser-libs/
+.scratch/
+test-results/
+playwright-report/

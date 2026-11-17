@@ -1,0 +1,24 @@
+{
+  "name": "synthetic-space-explorer",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "三维合成点集查询与无障碍键盘导航演示",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 4173",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4173",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/three": "^0.187.0",
+    "pngjs": "^7.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}
